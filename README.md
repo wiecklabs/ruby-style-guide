@@ -128,18 +128,30 @@ Translations of the guide are available in the following languages:
     e = M * c**2
     ```
 
-* No spaces after `(`, `[` or before `]`, `)`.
+* No spaces after `(`, `[` or before `]`, `)`
 
     ```Ruby
     some(arg).other
-    [1, 2, 3].length
+
+    items[1] = "Test"
+
+    def do_bleh(thing1, thing2)
+      # body ommitted
+    end
     ```
 
-* Indent `when` as deep as `case`. I know that many would disagree
-  with this one, but it's the style established in both the "The Ruby
-  Programming Language" and "Programming Ruby".
+  **EXCEPTION**: Array literals maye be defined with or without leading/trailing spaces
 
     ```Ruby
+    # Both OK
+    [1, 2, 3].length
+    [ 1, 2, 3 ].length
+    ```
+
+* Don't use case statements in place of if/elsif/else conditionals.
+
+    ```Ruby
+    # VERY BAD, no argument to `case'
     case
     when song.name == 'Misty'
       puts 'Not again!'
@@ -149,6 +161,34 @@ Translations of the guide are available in the following languages:
       puts "It's too late"
     else
       song.play
+    end
+
+    # GOOD, the subject changes, so use an if.
+    if song.name == 'Misty'
+      puts 'Not again!'
+    elsif song.duration > 120
+      puts 'Too long!'
+    elsif Time.now.hour > 21
+      puts "It's too late"
+    else
+      song.play
+    end
+    ```
+
+* Indent `when` as deep as `case`. I know that many would disagree
+  with this one, but it's the style established in both the "The Ruby
+  Programming Language" and "Programming Ruby".
+
+    ```Ruby
+    case person
+    when Admin
+      puts "Hola!"
+    when User
+      puts "Amigo!"
+    when Guest
+      puts "Good to see you friend."
+    else
+      raise VillianError.new(person)
     end
 
     kind = case year
@@ -178,33 +218,26 @@ Translations of the guide are available in the following languages:
     end
     ```
 
-* Align the parameters of a method call if they span over multiple lines.
+* If a method calls argumemt list goes over 80ish characters (use your judgement), break
+up the arguments onto multiple lines.
 
     ```Ruby
-    # starting point (line is too long)
+    # BAD. line is too long
     def send_mail(source)
       Mailer.deliver(to: 'bob@example.com', from: 'us@example.com', subject: 'Important message', body: source.text)
     end
 
-    # bad (normal indent)
+    # good
     def send_mail(source)
       Mailer.deliver(
         to: 'bob@example.com',
         from: 'us@example.com',
         subject: 'Important message',
-        body: source.text)
+        body: source.text
+      )
     end
 
-    # bad (double indent)
-    def send_mail(source)
-      Mailer.deliver(
-          to: 'bob@example.com',
-          from: 'us@example.com',
-          subject: 'Important message',
-          body: source.text)
-    end
-
-    # good
+    # goodish (arguments aligned)
     def send_mail(source)
       Mailer.deliver(to: 'bob@example.com',
                      from: 'us@example.com',
@@ -243,8 +276,7 @@ Translations of the guide are available in the following languages:
      end
      ```
 
-* Never use `for`, unless you know exactly why. Most of the time iterators
-  should be used instead. `for` is implemented in terms of `each` (so
+* Only use `for` in ERB templates. `for` is implemented in terms of `each` (so
   you're adding a level of indirection), but with a twist - `for`
   doesn't introduce a new scope (unlike `each`) and variables defined
   in its block will be visible outside it.
@@ -337,19 +369,16 @@ Translations of the guide are available in the following languages:
 * Avoid multi-line `?:` (the ternary operator); use `if/unless` instead.
 
 * Favor modifier `if/unless` usage when you have a single-line
-  body. Another good alternative is the usage of control flow `and/or`.
+  body.
 
     ```Ruby
-    # bad
-    if some_condition
-      do_something
-    end
-
     # good
     do_something if some_condition
 
-    # another good option
-    some_condition and do_something
+    # meh
+    if some_condition
+      do_something
+    end
     ```
 
 * Favor `unless` over `if` for negative conditions (or control
@@ -361,9 +390,6 @@ Translations of the guide are available in the following languages:
 
     # good
     do_something unless some_condition
-
-    # another good option
-    some_condition or do_something
     ```
 
 * Never use `unless` with `else`. Rewrite these with the positive case first.
@@ -403,29 +429,6 @@ Translations of the guide are available in the following languages:
     if (x = self.next_value)
       # body omitted
     end
-    ```
-
-* Favor modifier `while/until` usage when you have a single-line
-  body.
-
-    ```Ruby
-    # bad
-    while some_condition
-      do_something
-    end
-
-    # good
-    do_something while some_condition
-    ```
-
-* Favor `until` over `while` for negative conditions.
-
-    ```Ruby
-    # bad
-    do_something while !some_condition
-
-    # good
-    do_something until some_condition
     ```
 
 * Omit parentheses around parameters for methods that are part of an
@@ -588,6 +591,26 @@ Translations of the guide are available in the following languages:
     if (v = self.next_value) == 'hello' ...
     ```
 
+* Initialize all instance variables that have defaults inside the constructor
+
+    ```Ruby
+    # BAD
+    class Sack
+      def items
+        @items ||= []
+      end
+    end
+
+    # GOOD
+    class Sack
+      attr_reader :items
+
+      def initialize
+        @items = []
+      end
+    end
+    ```
+
 * Use `||=` freely to initialize variables.
 
     ```Ruby
@@ -746,7 +769,7 @@ you if you forget either of the rules above!
 > it even clearer. <br/>
 > -- Steve McConnell
 
-* Write self-documenting code and ignore the rest of this section. Seriously!
+* Write concise code
 * Comments longer than a word are capitalized and use punctuation. Use [one
   space](http://en.wikipedia.org/wiki/Sentence_spacing) after periods.
 * Avoid superfluous comments.
@@ -758,9 +781,6 @@ you if you forget either of the rules above!
 
 * Keep existing comments up-to-date. An outdated is worse than no comment
 at all.
-
-> Good code is like a good joke - it needs no explanation. <br/>
-> -- Russ Olsen
 
 * Avoid writing comments to explain bad code. Refactor the code to
   make it self-explanatory. (Do or do not - there is no try. --Yoda)
@@ -860,8 +880,11 @@ mutators.
       end
     end
     ```
+
 * Consider using `Struct.new`, which defines the trivial accessors,
-constructor and comparison operators for you.
+constructor and comparison operators for you.  Do this *only* for "throwaway"
+objects.  *NEVER* inherit from Struct.new, as it causes Superclass Mismatch errors
+when reloading code.
 
     ```Ruby
     # good
@@ -875,8 +898,7 @@ constructor and comparison operators for you.
     end
 
     # better
-    class Person < Struct.new(:first_name, :last_name)
-    end
+    Person = Struct.new(:first_name, :last_name)
     ````
 
 * Consider adding factory methods to provide additional sensible ways
@@ -1099,6 +1121,12 @@ in *Ruby* now, not in *Python*.
     do_something rescue nil
     ```
 
+  One exception is when callling "Date#parse"
+
+    ```Ruby
+    # ok -
+    date = Date.parse(params['date']) rescue nil
+    ```
 
 * Don't use exceptions for flow of control.
 
@@ -1214,6 +1242,9 @@ strings.
     # good
     STATES = %w(draft open closed)
     ```
+
+  You should almost never need to do this outside of defining enumerated
+values for a Domain Model property.
 
 * Avoid the creation of huge gaps in arrays.
 
@@ -1529,7 +1560,7 @@ patch them.)
 * Avoid `alias` when `alias_method` will do.
 * Use `OptionParser` for parsing complex command line options and
 `ruby -s` for trivial command line options.
-* Code in a functional way, avoiding mutation when that makes sense.
+* Code in a functional way, avoiding mutation in all but the cases where you absolutely cannot.
 * Do not mutate arguments unless that is the purpose of the method.
 * Avoid more than three levels of block nesting.
 * Be consistent. In an ideal world, be consistent with these guidelines.
