@@ -864,13 +864,16 @@ mutators.
     end
     ```
 
-* Never use `Struct` where you wouldn't also consider using an `OpenStruct`. Do this *only* for "throwaway" objects.  *NEVER* inherit from Struct.new, as it causes Superclass Mismatch errors when reloading code.
+* Never inherit from `Struct.new`.  Limit usage of Struct and OpenStruct instances to the local scope.  Do this *only* for "throwaway" objects.  Consider writing a discrete class instead.
 
     ```Ruby
     # BAD
     class Person < Struct.new(:first_name, :last_name)
     end
-    
+
+    # GOOD
+    Person = Struct.new(:first_name, :last_name)
+
     # GOOD
     class Person
       attr_reader :first_name, :last_name
