@@ -591,7 +591,7 @@ up the arguments onto multiple lines.
     if (v = self.next_value) == 'hello' ...
     ```
 
-* Initialize all instance variables that have defaults inside the constructor
+* Initialize all instance variables that should have initialization defaults inside the constructor. Don't defer initialization to accessors with `||=` if you know that the attribute will be used. If it's possible that it'll go unused, go ahead and defer it since the fastest code is the code that never runs.
 
     ```Ruby
     # BAD
@@ -629,9 +629,7 @@ would happen if the current value happened to be `false`.)
     enabled = true if enabled.nil?
     ```
 
-* Avoid using Perl-style special variables (like `$0-9`, `$``,
-  etc. ). They are quite cryptic and their use in anything but
-  one-liner scripts is discouraged.
+* You should know the common Ruby global variables like `$0` and `$/`. Avoid `$1-9`.
 
 * Never put a space between a method name and the opening parenthesis.
 
@@ -644,11 +642,18 @@ would happen if the current value happened to be `false`.)
     ```
 
 * If the first argument to a method begins with an open parenthesis,
-  always use parentheses in the method invocation. For example, write
-`f((3 + 2) + 1)`.
-
-* Always run the Ruby interpreter with the `-w` option so it will warn
-you if you forget either of the rules above!
+  always use parentheses in the method invocation. For example:
+  
+    ```Ruby
+    # BAD
+    add (3 + 2) + 1
+    
+    # GOOD
+    add((3 + 2) + 1)
+    
+    # GOOD
+    add( (3 + 2) + 1 )
+    ```
 
 * The new hash literal syntax is preferred in Ruby 1.9 when your hash keys are symbols.
 
@@ -663,13 +668,29 @@ you if you forget either of the rules above!
 * The new lambda literal syntax is preferred in Ruby 1.9.
 
     ```Ruby
-    # bad
+    # BAD
     lambda = lambda { |a, b| a + b }
-    lambda.call(1, 2)
-
-    # good
+    
+    # GOOD
     lambda = ->(a, b) { a + b }
-    lambda.(1, 2)
+    ```
+
+* Always use `#call` to execute a lambda:
+
+    ```Ruby
+    add = lambda { |a, b| a + b }
+    
+    # BAD
+    add.(1, 2)
+    
+    # BAD
+    add[1, 2]
+    
+    # ACCEPTABLE (use your judgement in context)
+    add.call 1, 2
+    
+    # GOOD
+    add.call(1, 2)
     ```
 
 * Use `_` for unused block parameters.
@@ -695,53 +716,12 @@ you if you forget either of the rules above!
 * The names of predicate methods (methods that return a boolean value)
   should end in a question mark.
   (i.e. `Array#empty?`).
+  
 * The names of potentially "dangerous" methods (i.e. methods that modify `self` or the
   arguments, `exit!` (doesn't run the finalizers like `exit` does), etc.) should end with an exclamation mark if
   there exists a safe version of that *dangerous* method.
-
-    ```Ruby
-    # bad - there is not matching 'safe' method
-    class Person
-      def update!
-      end
-    end
-
-    # good
-    class Person
-      def update
-      end
-    end
-
-    # good
-    class Person
-      def update!
-      end
-
-      def update
-      end
-    end
-    ```
-
-* Define the non-bang (safe) method in terms of the bang (dangerous)
-  one if possible.
-
-    ```Ruby
-    class Array
-      def flatten_once!
-        res = []
-
-        each do |e|
-          [*e].each { |f| res << f }
-        end
-
-        replace(res)
-      end
-
-      def flatten_once
-        dup.flatten_once!
-      end
-    end
-    ```
+* Examples of *dangerous* methods would be methods that mutate collections, modify the file-system, or perform operations like `require` that can't be easily undone.
+* Don't include non-bang "safe" methods just to have them unless that makes sense in the context of your API.
 
 * When using `reduce` with short blocks, name the arguments `|a, e|`
   (accumulator, element).
@@ -753,13 +733,8 @@ you if you forget either of the rules above!
     end
     ```
 
-* Prefer `map` over `collect`, `find` over `detect`, `select` over
-  `find_all`, `reduce` over `inject` and `size` over `length`. This is
-  not a hard requirement; if the use of the alias enhances
-  readability, it's ok to use it. The rhyming methods are inherited from
-  Smalltalk and are not common in other programming languages. The
-  reason the use of `select` is encouraged over `find_all` is that it
-  goes together nicely with `reject` and its name is pretty self-explanatory.
+* Use `map` over `collect`, `detect` over `find`, `select` over
+  `find_all`, `reduce` over `inject` and `size` over `length`.
 
 ## Comments
 
@@ -779,24 +754,31 @@ you if you forget either of the rules above!
     counter += 1 # increments counter by one
     ```
 
-* Keep existing comments up-to-date. An outdated is worse than no comment
+* Keep existing comments up-to-date. An outdated comment is worse than no comment
 at all.
 
 * Avoid writing comments to explain bad code. Refactor the code to
   make it self-explanatory. (Do or do not - there is no try. --Yoda)
+  
+* Keep in mind that there's no such thing as code that's so readable you'll understand
+  your intent a year from now.
+  
+* Also keep in mind that you should never have more comments than code. Large detailed
+  usage examples, development guidelines and architecture discussions belong on a Wiki,
+  not in your code. That's just begging the comments to be carelessly obsoleted.
 
 ## Annotations
 
-* Annotations should usually be written on the line immediately above
-  the relevant code.
+* The only Annotation you should ever use is `# TODO: $explanation...`. The point of it is to find-in-project. If it's a FIX, include a brief note of the problem, and the solution you envision (if it occurs to you).
 * The annotation keyword is followed by a colon and a space, then a note
   describing the problem.
 * If multiple lines are required to describe the problem, subsequent
   lines should be indented two spaces after the `#`.
+* Feel free to use sub-classification of annotations as long as they always start with `TODO`.
 
     ```Ruby
     def bar
-      # FIXME: This has crashed occasionally since v3.2.1. It may
+      # TODO: BUG: This has crashed occasionally since v3.2.1. It may
       #   be related to the BarBazUtil upgrade.
       baz(:quux)
     end
@@ -808,10 +790,11 @@ at all.
 
     ```Ruby
     def bar
-      sleep 100 # OPTIMIZE
+      sleep 100 # TODO: OPTIMIZE
     end
     ```
 
+### Suggestions for sub-classification:
 * Use `TODO` to note missing features or functionality that should be
   added at a later date.
 * Use `FIXME` to note broken code that needs to be fixed.
@@ -881,13 +864,14 @@ mutators.
     end
     ```
 
-* Consider using `Struct.new`, which defines the trivial accessors,
-constructor and comparison operators for you.  Do this *only* for "throwaway"
-objects.  *NEVER* inherit from Struct.new, as it causes Superclass Mismatch errors
-when reloading code.
+* Never use `Struct` where you wouldn't also consider using an `OpenStruct`. Do this *only* for "throwaway" objects.  *NEVER* inherit from Struct.new, as it causes Superclass Mismatch errors when reloading code.
 
     ```Ruby
-    # good
+    # BAD
+    class Person < Struct.new(:first_name, :last_name)
+    end
+    
+    # GOOD
     class Person
       attr_reader :first_name, :last_name
 
@@ -896,9 +880,6 @@ when reloading code.
         @last_name = last_name
       end
     end
-
-    # better
-    Person = Struct.new(:first_name, :last_name)
     ````
 
 * Consider adding factory methods to provide additional sensible ways
@@ -912,31 +893,10 @@ to create instances of a particular class.
     end
     ```
 
-* Prefer [duck-typing](http://en.wikipedia.org/wiki/Duck_typing) over inheritance.
+* Prefer inheritance over [duck-typing](http://en.wikipedia.org/wiki/Duck_typing). It's self documenting and enables you to guide usage with `ArgumentError` checks.
 
     ```Ruby
-    # bad
-    class Animal
-      # abstract method
-      def speak
-      end
-    end
-
-    # extend superclass
-    class Duck < Animal
-      def speak
-        puts 'Quack! Quack'
-      end
-    end
-
-    # extend superclass
-    class Dog < Animal
-      def speak
-        puts 'Bau! Bau!'
-      end
-    end
-
-    # good
+    # BAD
     class Duck
       def speak
         puts 'Quack! Quack'
@@ -948,10 +908,48 @@ to create instances of a particular class.
         puts 'Bau! Bau!'
       end
     end
+    
+    # GOOD
+    class Animal
+      # abstract method
+      def speak
+        raise NotImplementedError.new
+      end
+    end
+    
+    # extend superclass
+    class Duck < Animal
+      def speak
+        puts 'Quack! Quack'
+      end
+    end
+    
+    # extend superclass
+    class Dog < Animal
+      def speak
+        puts 'Bau! Bau!'
+      end
+    end
+    
+    class Pets
+      include Enumerable
+      
+      def initialize
+        @pets = Set.new
+      end
+      
+      def <<(pet)
+        raise ArgumentError.new("Expected +pet+ to be an Animal but was #{pet.class.name.inspect}") unless pet.is_a?(Animal)
+        @pets << pet
+      end
+      
+      def each
+        @pets.each { |pet| yield pet }
+      end
+    end
     ```
 
-* Avoid the usage of class (`@@`) variables due to their "nasty" behavior
-in inheritance.
+* Prefer class instance-variables over class-variables.
 
     ```Ruby
     class Parent
@@ -973,11 +971,12 @@ in inheritance.
     class variable. Class instance variables should usually be preferred
     over class variables.
 
-* Assign proper visibility levels to methods (`private`, `protected`)
+* Assign proper visibility levels to methods (`private`)
 in accordance with their intended usage. Don't go off leaving
 everything `public` (which is the default). After all we're coding
 in *Ruby* now, not in *Python*.
-* Indent the `public`, `protected`, and `private` methods as much the
+* Never use `protected` in Ruby. It doesn't mean what it does in every other language (`private` is actually the equivalent to `protected` in other languages), it'll just confuse.
+* Indent the `public` and `private` methods as much the
   method definitions they apply to. Leave one blank line above them.
 
     ```Ruby
@@ -994,45 +993,62 @@ in *Ruby* now, not in *Python*.
     ```
 
 * Use `def self.method` to define singleton methods. This makes the code
-  easier to refactor since the class name is not repeated.
+  easier to refactor since the class name is not repeated. Don't use the "clever" hack of `class << self`.
 
     ```Ruby
     class TestClass
-      # bad
+      # BAD
       def TestClass.some_method
         # body omitted
       end
 
-      # good
-      def self.some_other_method
-        # body omitted
-      end
-
-      # Also possible and convenient when you
-      # have to define many singleton methods.
+      # BAD
       class << self
         def first_method
           # body omitted
         end
-
+      
         def second_method_etc
           # body omitted
         end
+      end
+      
+      # GOOD
+      def self.some_other_method
+        # body omitted
       end
     end
     ```
 
 ## Exceptions
 
-* Signal exceptions using the `fail` keyword. Use `raise` only when
-  catching an exception and re-raising it (because here you're not failing, but explicitly and purposefully raising an exception).
+* Signal exceptions using the `raise` keyword.
 
     ```Ruby
     begin
+      # BAD
       fail 'Oops';
+      
+      # GOOD
+      raise FancyPantsError.new
     rescue => error
       raise if error.message != 'Oops'
     end
+    ```
+* Strive to always Type your exceptions so downstream users can handle them appropriately.
+
+    ```ruby
+    # BAD
+    raise "The gem #{gem.name} wasn't found!"
+    
+    # GOOD
+    class MissingGemError < StandardError
+      def initialize(gem)
+        super "The gem #{gem.name} wasn't found!"
+      end
+    end
+    
+    raise MissingGemError.new(gem)
     ```
 
 * Never return from an `ensure` block. If you explicitly return from a
@@ -1100,7 +1116,7 @@ in *Ruby* now, not in *Python*.
     with_io_error_handling { something_else_that_might_fail }
     ```
 
-* Don't suppress exceptions.
+* As a general rule, don't suppress exceptions.
 
     ```Ruby
     # bad
@@ -1114,18 +1130,15 @@ in *Ruby* now, not in *Python*.
     do_something rescue nil
     ```
     
-* Avoid using `rescue` in its modifier form.    
+* Avoid using `rescue` in its modifier form except in `parse` cases.
 
     ```Ruby
-    # bad - this catches all StandardError exceptions
+    # BAD - this catches all StandardError exceptions
     do_something rescue nil
-    ```
-
-  One exception is when callling "Date#parse"
-
-    ```Ruby
-    # ok -
-    date = Date.parse(params['date']) rescue nil
+    
+    # OK - Most of the stdlib classes that implement a #parse method
+    #      don't also implement a silent #try_parse method.
+    @published_at = Time::parse(value) rescue nil
     ```
 
 * Don't use exceptions for flow of control.
@@ -1232,19 +1245,15 @@ pass parameters to their constructors, that is).
     hash = {}
     ```
 
-* Prefer `%w` to the literal array syntax when you need an array of
-strings.
+* Avoid percent-expressions (`%w`).
 
     ```Ruby
-    # bad
-    STATES = ['draft', 'open', 'closed']
-
-    # good
+    # BAD
     STATES = %w(draft open closed)
+    
+    # GOOD
+    STATES = ['draft', 'open', 'closed']
     ```
-
-  You should almost never need to do this outside of defining enumerated
-values for a Domain Model property.
 
 * Avoid the creation of huge gaps in arrays.
 
@@ -1257,40 +1266,21 @@ values for a Domain Model property.
   implements a collection of unordered values with no duplicates. This
   is a hybrid of `Array`'s intuitive inter-operation facilities and
   `Hash`'s fast lookup.
-* Prefer symbols instead of strings as hash keys.
-
-    ```Ruby
-    # bad
-    hash = { 'one' => 1, 'two' => 2, 'three' => 3 }
-
-    # good
-    hash = { one: 1, two: 2, three: 3 }
-    ```
+* Prefer Strings instead of Symbols as hash keys unless you've carefully considered the potential of bloating your Symbol table, which is never Garbage Collected.
 
 * Avoid the use of mutable objects as hash keys.
 * The new hash literal syntax is preferred in Ruby 1.9 when your hash keys are symbols.
 
     ```Ruby
-    # bad
+    # BAD
     hash = { :one => 1, :two => 2, :three => 3 }
 
-    # good
+    # GOOD
     hash = { one: 1, two: 2, three: 3 }
     ```
 
-* Use `fetch` when dealing with hash keys that should be present.
+* Avoid `Hash#fetch`. The value isn't assigned to the key, so it can hide performance issues if your default is expensive to compute.
 
-    ```Ruby
-    heroes = { batman: 'Bruce Wayne', superman: 'Clark Kent' }
-    # bad - if we make a mistake we might not spot it right away
-    heroes[:batman] # => "Bruce Wayne"
-    heroes[:supermann] # => nil
-    
-    # good - fetch raises a KeyError making the problem obvious
-    heroes.fetch(:supermann)
-    ```
-
-* Rely on the fact that hashes in Ruby 1.9 are ordered.
 * Never modify a collection while traversing it.
 
 ## Strings
@@ -1306,56 +1296,38 @@ values for a Domain Model property.
     ```
 
 * Consider padding string interpolation code with space. It more clearly sets the
-  code apart from the string.
+  code apart from the string. Use your best judgement.
 
     ```Ruby
     "#{ user.last_name }, #{ user.first_name }"
     ```
 
-* Prefer single-quoted strings when you don't need string interpolation or
-  special symbols such as `\t`, `\n`, `'`, etc.
+* Always prefer double-quoted strings.
 
     ```Ruby
-    # bad
-    name = "Bozhidar"
-
-    # good
+    # BAD
     name = 'Bozhidar'
+
+    # GOOD
+    name = "Bozhidar"
     ```
 
-* Don't use `{}` around instance variables being interpolated into a
-  string.
+* Avoid using `String#+` or `String#<<` when you need to construct large data chunks. Use a `StringIO` instead.
 
     ```Ruby
-    class Person
-      attr_reader :first_name, :last_name
-
-      def initialize(first_name, last_name)
-        @first_name = first_name
-        @last_name = last_name
-      end
-
-      # bad
-      def to_s
-        "#{@first_name} #{@last_name}"
-      end
-
-      # good
-      def to_s
-        "#@first_name #@last_name"
-      end
-    end
-    ```
-
-* Avoid using `String#+` when you need to construct large data chunks.
-  Instead, use `String#<<`. Concatenation mutates the string instance in-place
-  and is always faster than `String#+`, which creates a bunch of new string objects.
-
-    ```Ruby
-    # good and also fast
+    # BAD
     html = ''
     html << '<h1>Page title</h1>'
 
+    paragraphs.each do |paragraph|
+      html << "<p>#{paragraph}</p>"
+    end
+    
+    # GOOD - Faster, less GC thrashing since you aren't constantly
+    #        expanding the size of the String.
+    html = StringIO.new
+    html << '<h1>Page title</h1>'
+    
     paragraphs.each do |paragraph|
       html << "<p>#{paragraph}</p>"
     end
@@ -1425,113 +1397,31 @@ values for a Domain Model property.
 
 ## Percent Literals
 
-* Use `%w` freely.
+* Avoid `%w`.
 
     ```Ruby
     STATES = %w(draft open closed)
     ```
 
-* Use `%()` for single-line strings which require both interpolation
-  and embedded double-quotes. For multi-line strings, prefer heredocs.
+* Avoid `%r`.
 
     ```Ruby
-    # bad (no interpolation needed)
-    %(<div class="text">Some text</div>)
-    # should be '<div class="text">Some text</div>'
-
-    # bad (no double-quotes)
-    %(This is #{quality} style)
-    # should be "This is #{quality} style"
-
-    # bad (multiple lines)
-    %(<div>\n<span class="big">#{exclamation}</span>\n</div>)
-    # should be a heredoc.
-
-    # good (requires interpolation, has quotes, single line)
-    %(<tr><td class="name">#{name}</td>)
-    ```
-
-* Use `%r` only for regular expressions matching *more than* one '/' character.
-
-    ```Ruby
-    # bad
+    # BAD
     %r(\s+)
 
-    # still bad
+    # BAD
     %r(^/(.*)$)
     # should be /^\/(.*)$/
 
-    # good
-    %r(^/blog/2011/(.*)$)
+    # GOOD
+    /^\/blog\/2011\/(.*)$/
     ```
 
 * Avoid `%q`, `%Q`, `%x`, `%s`, and `%W`.
 
-* Prefer `()` as delimiters for all `%` literals.
-
 ## Metaprogramming
 
 * Avoid needless metaprogramming.
-
-* Do not mess around in core classes when writing libraries. (Do not monkey
-patch them.)
-
-* The block form of `class_eval` is preferable to the string-interpolated form.
-  - when you use the string-interpolated form, always supply `__FILE__` and `__LINE__`, so that your backtraces make sense:
-
-    ```ruby
-    class_eval 'def use_relative_model_naming?; true; end', __FILE__, __LINE__
-    ```
-
-  - `define_method` is preferable to `class_eval{ def ... }`
-
-* When using `class_eval` (or other `eval`) with string interpolation, add a comment block showing its appearance if interpolated (a practice I learned from the rails code):
-
-    ```ruby
-    # from activesupport/lib/active_support/core_ext/string/output_safety.rb
-    UNSAFE_STRING_METHODS.each do |unsafe_method|
-      if 'String'.respond_to?(unsafe_method)
-        class_eval <<-EOT, __FILE__, __LINE__ + 1
-          def #{unsafe_method}(*args, &block)       # def capitalize(*args, &block)
-            to_str.#{unsafe_method}(*args, &block)  #   to_str.capitalize(*args, &block)
-          end                                       # end
-
-          def #{unsafe_method}!(*args)              # def capitalize!(*args)
-            @dirty = true                           #   @dirty = true
-            super                                   #   super
-          end                                       # end
-        EOT
-      end
-    end
-    ```
-
-* avoid using `method_missing` for metaprogramming. Backtraces become messy; the behavior is not listed in `#methods`; misspelled method calls might silently work (`nukes.launch_state = false`). Consider using delegation, proxy, or `define_method` instead.  If you must, use `method_missing`,
-  - be sure to [also define `respond_to_missing?`](http://blog.marc-andre.ca/2010/11/methodmissing-politely.html)
-  - only catch methods with a well-defined prefix, such as `find_by_*` -- make your code as assertive as possible.
-  - call `super` at the end of your statement
-  - delegate to assertive, non-magical methods:
-
-    ```ruby
-    # bad
-    def method_missing?(meth, *args, &block)
-      if /^find_by_(?<prop>.*)/ =~ meth
-        # ... lots of code to do a find_by
-      else
-        super
-      end
-    end
-
-    # good
-    def method_missing?(meth, *args, &block)
-      if /^find_by_(?<prop>.*)/ =~ meth
-        find_by(prop, *args, &block)
-      else
-        super
-      end
-    end
-
-    # best of all, though, would to define_method as each findable attribute is declared
-    ```
 
 ## Misc
 
@@ -1540,7 +1430,6 @@ patch them.)
 * Avoid methods longer than 10 LOC (lines of code). Ideally, most methods will be shorter than
   5 LOC. Empty lines do not contribute to the relevant LOC.
 * Avoid parameter lists longer than three or four parameters.
-* If you really have to, add "global" methods to Kernel and make them private.
 * Use class instance variables instead of global variables.
 
     ```Ruby
@@ -1558,8 +1447,7 @@ patch them.)
     ```
 
 * Avoid `alias` when `alias_method` will do.
-* Use `OptionParser` for parsing complex command line options and
-`ruby -s` for trivial command line options.
+* Use `OptionParser` for parsing command line options.
 * Code in a functional way, avoiding mutation in all but the cases where you absolutely cannot.
 * Do not mutate arguments unless that is the purpose of the method.
 * Avoid more than three levels of block nesting.
