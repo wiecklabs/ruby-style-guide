@@ -84,6 +84,7 @@ Translations of the guide are available in the following languages:
 > -- Jerry Coffin (on indentation)
 
 * Use `UTF-8` as the source file encoding.
+* Always add the file-encoding directive to the top of each ruby file in your project: `# encoding: UTF-8`
 * Use two **spaces** per indentation level. No hard tabs.
 
     ```Ruby
