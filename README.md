@@ -754,6 +754,7 @@ would happen if the current value happened to be `false`.)
     # bad
     counter += 1 # increments counter by one
     ```
+* Do not use Ruby's block-comment syntax (`=begin` and `=end`) for multiline comments.  Precede each line with a `#`
 
 * Keep existing comments up-to-date. An outdated comment is worse than no comment
 at all.
